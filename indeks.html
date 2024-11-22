@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekap Kerja Alat Pertanian Combine</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-image: url('https://www.agriculture.com/captivating-combine-harvest.jpg');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+    .container {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: 300px;
+        text-align: center;
+    }
+    input, button {
+        width: 100%;
+        padding: 8px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    button {
+        background-color: #28a745;
+        color: white;
+        cursor: pointer;
+    }
+    button:hover { background-color: #218838; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    table, th, td {
+        border: 1px solid #ccc;
+    }
+    th, td {
+        padding: 10px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div class="container" id="authContainer">
+    <h1>Login</h1>
+    <input type="text" id="username" placeholder="Nama Pengguna">
+    <input type="password" id="password" placeholder="Kata Sandi">
+    <button onclick="login()">Masuk</button>
+    <button onclick="showRegister()">Daftar</button>
+</div>
+
+<div class="container" id="appContainer" style="display: none;">
+    <h1>Rekap Kerja Alat Pertanian Combine</h1>
+    <div>
+        <label for="jamKerjaTarget">Jam kerja target (jam):</label>
+        <input type="number" id="jamKerjaTarget" step="0.01">
+    </div>
+    <div>
+        <label for="jamKerjaHariIni">Jam kerja hari ini:</label>
+        <input type="number" id="jamKerjaHariIni" step="0.01">
+    </div>
+    <button onclick="tambahData()">Tambah Data</button>
+    <h2>Data Kerja</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Jam Kerja (jam)</th>
+            </tr>
+        </thead>
+        <tbody id="dataKerja"></tbody>
+    </table>
+    <h2>Hasil</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Keterangan</th>
+                <th>Jam Kerja (jam)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>Total jam kerja</th>
+                <td id="totalKerja"></td>
+            </tr>
+            <tr>
+                <th>Sisa jam kerja target</th>
+                <td id="sisaTarget"></td>
+            </tr>
+            <tr>
+                <th>Ganti oli dan filter</th>
+                <td id="oliFilter"></td>
+            </tr>
+            <tr>
+                <th>Filter water separator</th>
+                <td id="waterSeparator"></td>
+            </tr>
+            <tr>
+                <th>Filter udara</th>
+                <td id="filterUdara"></td>
+            </tr>
+            <tr>
+                <th>Coolant</th>
+                <td id="radiatorFilter"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    let totalKerja = 0;
+
+    function showRegister() {
+        document.getElementById('authContainer').innerHTML = `
+            <h1>Daftar</h1>
+            <input type="text" id="newUsername" placeholder="Nama Pengguna">
+            <input type="password" id="newPassword" placeholder="Kata Sandi">
+            <button onclick="register()">Daftar</button>
+            <button onclick="showLogin()">Kembali</button>
+        `;
+    }
+
+    function showLogin() {
+        document.getElementById('authContainer').innerHTML = `
+            <h1>Login</h1>
+            <input type="text" id="username" placeholder="Nama Pengguna">
+            <input type="password" id="password" placeholder="Kata Sandi">
+            <button onclick="login()">Masuk</button>
+            <button onclick="showRegister()">Daftar</button>
+        `;
+    }
+
+    function register() {
+        const username = document.getElementById('newUsername').value;
+        const password = document.getElementById('newPassword').value;
+        if (username && password) {
+            users[username] = password;
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Registrasi berhasil!');
+            showLogin();
+        } else {
+            alert('Isi semua kolom!');
+        }
+    }
+
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        if (users[username] && users[username] === password) {
+            alert('Login berhasil');
+            loadData(username);
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+        } else {
+            alert('Nama pengguna atau kata sandi salah');
+        }
+    }
+
+    function loadData(username) {
+        const data = JSON.parse(localStorage.getItem(`data_${username}`)) || { totalKerja: 0, records: [] };
+        totalKerja = data.totalKerja;
+        data.records.forEach(record => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${record.tanggal}</td><td>${record.jamKerja}</td>`;
+            document.getElementById('dataKerja').appendChild(row);
+        });
+        updateHasil();
+    }
+
+    function saveData(username) {
+        const records = Array.from(document.getElementById('dataKerja').children).map(row => ({
+            tanggal: row.cells[0].innerText,
+            jamKerja: parseFloat(row.cells[1].innerText)
+        }));
+        localStorage.setItem(`data_${username}`, JSON.stringify({ totalKerja, records }));
+    }
+
+    function tambahData() {
+        const jamKerjaHariIni = parseFloat(document.getElementById('jamKerjaHariIni').value);
+        const jamKerjaTarget = parseFloat(document.getElementById('jamKerjaTarget').value);
+        if (!isNaN(jamKerjaHariIni) && jamKerjaHariIni > 0) {
+            totalKerja += jamKerjaHariIni;
+            const row = document.createElement('tr');
+            const now = new Date().toLocaleDateString("id-ID");
+            row.innerHTML = `<td>${now}</td><td>${jamKerjaHariIni.toFixed(2)}</td>`;
+            document.getElementById('dataKerja').appendChild(row);
+            updateHasil(jamKerjaTarget);
+            saveData(document.getElementById('username').value);
+        } else {
+            alert('Masukkan jumlah jam kerja yang valid');
+        }
+        document.getElementById('jamKerjaHariIni').value = '';
+    }
+
+    function updateHasil(jamKerjaTarget = 0) {
+        const sisaTarget = jamKerjaTarget - totalKerja;
+        document.getElementById('totalKerja').innerText = totalKerja.toFixed(2);
+        document.getElementById('sisaTarget').innerText = sisaTarget.toFixed(2);
+        document.getElementById('oliFilter').innerText = (300 - (totalKerja % 300)).toFixed(2);
+        document.getElementById('waterSeparator').innerText = (600 - (totalKerja % 600)).toFixed(2);
+        document.getElementById('filterUdara').innerText = (450 - (totalKerja % 450)).toFixed(2);
+        document.getElementById('radiatorFilter').innerText = (800 - (totalKerja % 800)).toFixed(2);
+    }
+</script>
+</body>
+</html>
+
